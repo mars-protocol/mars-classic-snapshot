@@ -7,5 +7,8 @@ export const MARS_STAKING = "terra1y8wwr5q24msk55x9smwn0ptyt24fxpwm4l7tjl";
 export const ASTROPORT_MARS_UST_PAIR = "terra19wauh79y42u5vt62c5adt2g5h4exgh26t3rpds";
 export const ASTROPORT_XMARS_MARS_PAIR = "terra1dawj5mr2qt2nlurge30lfgjg6ly4ls99yeyd25";
 
+// https://github.com/st4k3h0us3/multiquery
+export const MULTIQUERY = "terra1swrywzkphty20e2uzpy582xu836luw0e5yp25m";
+
 export const PRE_ATTACK_HEIGHT = 7544910;
 export const POST_ATTACK_HEIGHT = 7790000; // this is the TFL snapshot height; Mars may use a different one

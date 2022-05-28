@@ -1,13 +1,19 @@
 import axios from "axios";
 import axiosRetry from "axios-retry";
 
-import { encodeBase64 } from "./helpers";
+import { encodeBase64, decodeBase64 } from "./helpers";
+import { MULTIQUERY } from "./constants";
 
 axiosRetry(axios);
 
 export type WasmContractStoreResponse<T> = {
   query_result: T;
 };
+
+export type MultiQueryResponse = {
+  success: boolean;
+  data: string;
+}[];
 
 export type Cw20AllAccountsResponse = {
   accounts: string[];
@@ -60,27 +66,45 @@ export async function getCw20Balances(
   height: number
 ) {
   const total = owners.length;
+  const batchSize = 30;
   let count = 0;
   let accountsWithBalances: AccountWithBalance[] = [];
 
-  for (const owner of owners) {
-    const query = encodeBase64({
-      balance: {
-        address: owner,
-      },
-    });
-    const response = await axios.get<WasmContractStoreResponse<Cw20BalanceResponse>>(
-      `${restUrl}/terra/wasm/v1beta1/contracts/${tokenAddress}/store?height=${height}&query_msg=${query}`
+  for (let start = 0; start < total; start += batchSize) {
+    const end = start + batchSize;
+    const slice = owners.slice(start, end > total ? total : end);
+    const queryMsg = encodeBase64(
+      slice.map((owner) => ({
+        wasm: {
+          smart: {
+            contract_addr: tokenAddress,
+            msg: encodeBase64({
+              balance: {
+                address: owner,
+              },
+            }),
+          },
+        },
+      }))
     );
-    const result = response.data.query_result;
+    const response = await axios.get<WasmContractStoreResponse<MultiQueryResponse>>(
+      `${restUrl}/terra/wasm/v1beta1/contracts/${MULTIQUERY}/store?height=${height}&query_msg=${queryMsg}`
+    );
+    const results = response.data.query_result;
 
-    accountsWithBalances.push({
-      address: owner,
-      balance: Number(result.balance),
+    slice.forEach((owner, index) => {
+      const result = results[index];
+      if (result) {
+        const balanceResponse: Cw20BalanceResponse = decodeBase64(result.data);
+        accountsWithBalances.push({
+          address: owner,
+          balance: Number(balanceResponse.balance),
+        });
+
+        count += 1;
+        console.log(`[${count}/${total}] address = ${owner}, balance = ${balanceResponse.balance}`);
+      }
     });
-
-    count += 1;
-    console.log(`[${count}/${total}] address = ${owner}, balance = ${result.balance}`);
   }
 
   // remove all accounts with zero balances
