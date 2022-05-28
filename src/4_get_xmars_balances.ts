@@ -15,7 +15,7 @@ const height = constants.PRE_ATTACK_HEIGHT;
 
   const accountsWithBalances = await getCw20Balances(
     constants.REST_URL,
-    constants.MARS_TOKEN,
+    constants.XMARS_TOKEN,
     owners,
     height
   );

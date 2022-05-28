@@ -15,6 +15,15 @@ type Entry = {
   xmarsBalancePre: number;
 };
 
+async function accountHasPubKey(restUrl: string, address: string) {
+  try {
+    const { data: { account } } = await axios.get(`${restUrl}/cosmos/auth/v1beta1/accounts/${address}`);
+    return "pub_key" in account && !!account["pub_key"];
+  } catch {
+    return false;
+  }
+}
+
 (async function () {
   const marsBalancesPre: AccountWithBalance[] = JSON.parse(
     fs.readFileSync(
@@ -38,9 +47,7 @@ type Entry = {
   const total = owners.size;
   let count = 0;
   for (const owner of owners) {
-    const { data: { account } } = await axios.get(`${constants.REST_URL}/cosmos/auth/v1beta1/accounts/${owner}`);
-    const hasPubKey = "pub_key" in account && !!account["pub_key"];
-
+    const hasPubKey = await accountHasPubKey(constants.REST_URL, owner);
     const entry = {
       address: owner,
       hasPubKey,

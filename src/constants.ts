@@ -1,4 +1,4 @@
-export const REST_URL = "http://172.255.98.36:1317";
+export const REST_URL = "https://mantlemint-1.terra.p2p.org";
 
 export const MARS_TOKEN = "terra12hgwnpupflfpuual532wgrxu2gjp0tcagzgx4n";
 export const XMARS_TOKEN = "terra1a04v570f9cxp49mk06vjsm8axsswndpwwt67k4";
