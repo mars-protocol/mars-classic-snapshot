@@ -1,8 +1,15 @@
-import { LCDClient } from "@terra-money/terra.js";
+import axios from "axios";
+import axiosRetry from "axios-retry";
 
-import { retry } from "./helpers";
+import { encodeBase64 } from "./helpers";
 
-export type AllAccountsResponse = {
+axiosRetry(axios);
+
+export type WasmContractStoreResponse<T> = {
+  query_result: T;
+};
+
+export type Cw20AllAccountsResponse = {
   accounts: string[];
 };
 
@@ -15,35 +22,30 @@ export type AccountWithBalance = {
   balance: number;
 };
 
-export async function getCw20Owners(lcd: LCDClient, tokenAddress: string, height?: number) {
+export async function getCw20Owners(restUrl: string, tokenAddress: string, height: number) {
   let accounts: string[] = [];
   let startAfter: string | undefined = undefined;
 
-  // fetch all acocunts
   while (true) {
-    const response: AllAccountsResponse = await retry(
-      lcd.wasm.contractQuery(
-        tokenAddress,
-        {
-          all_accounts: {
-            start_after: startAfter,
-            limit: 30,
-          },
-        },
-        {
-          height: height?.toString(),
-        }
-      )
+    const query = encodeBase64({
+      all_accounts: {
+        start_after: startAfter,
+        limit: 30,
+      },
+    });
+    const response = await axios.get<WasmContractStoreResponse<Cw20AllAccountsResponse>>(
+      `${restUrl}/terra/wasm/v1beta1/contracts/${tokenAddress}/store?height=${height}&query_msg=${query}`
     );
+    const result = response.data.query_result;
 
-    if (response.accounts.length === 0) {
+    if (result.accounts.length === 0) {
       break;
     }
 
-    accounts = accounts.concat(response.accounts);
-    startAfter = response.accounts[response.accounts.length - 1];
+    accounts = accounts.concat(result.accounts);
+    startAfter = result.accounts[result.accounts.length - 1];
 
-    console.log(`fetched ${response.accounts.length} accounts, startAfter =`, startAfter);
+    console.log(`fetched ${result.accounts.length} accounts, startAfter =`, startAfter);
   }
 
   console.log(`fetched a total of ${accounts.length} accounts!`);
@@ -52,37 +54,33 @@ export async function getCw20Owners(lcd: LCDClient, tokenAddress: string, height
 }
 
 export async function getCw20Balances(
-  lcd: LCDClient,
+  restUrl: string,
   tokenAddress: string,
   owners: string[],
-  height?: number
+  height: number
 ) {
   const total = owners.length;
   let count = 0;
   let accountsWithBalances: AccountWithBalance[] = [];
 
   for (const owner of owners) {
-    const response: Cw20BalanceResponse = await retry(
-      lcd.wasm.contractQuery(
-        tokenAddress,
-        {
-          balance: {
-            address: owner,
-          },
-        },
-        {
-          height: height?.toString(),
-        }
-      )
+    const query = encodeBase64({
+      balance: {
+        address: owner,
+      },
+    });
+    const response = await axios.get<WasmContractStoreResponse<Cw20BalanceResponse>>(
+      `${restUrl}/terra/wasm/v1beta1/contracts/${tokenAddress}/store?height=${height}&query_msg=${query}`
     );
+    const result = response.data.query_result;
 
     accountsWithBalances.push({
       address: owner,
-      balance: Number(response.balance),
+      balance: Number(result.balance),
     });
 
     count += 1;
-    console.log(`[${count}/${total}] address = ${owner}, balance = ${response.balance}`);
+    console.log(`[${count}/${total}] address = ${owner}, balance = ${result.balance}`);
   }
 
   // remove all accounts with zero balances
