@@ -8,69 +8,82 @@ import * as constants from "./constants";
 
 axiosRetry(axios);
 
-type Entry = {
-  address: string;
-  hasPubKey: boolean;
-  marsBalancePre: number;
-  xmarsBalancePre: number;
+type WasmContractInfoResponse = {
+  contract_info: {
+    address: string;
+    creator: string;
+    admin: string;
+    code_id: string;
+    init_msg: object;
+  }
 };
 
-async function accountHasPubKey(restUrl: string, address: string) {
+type Entry = {
+  address: string;
+  isContract: boolean;
+  marsBalance: number;
+  xmarsBalance: number;
+};
+
+async function isContract(restUrl: string, address: string) {
   try {
-    const { data: { account } } = await axios.get(`${restUrl}/cosmos/auth/v1beta1/accounts/${address}`);
-    return "pub_key" in account && !!account["pub_key"];
+    await axios.get<WasmContractInfoResponse>(`${restUrl}/terra/wasm/v1beta1/contracts/${address}`);
+    return true;
   } catch {
     return false;
   }
 }
 
+const height = constants.PRE_ATTACK_HEIGHT;
+
 (async function () {
-  const marsBalancesPre: AccountWithBalance[] = JSON.parse(
+  const marsBalances: AccountWithBalance[] = JSON.parse(
     fs.readFileSync(
-      path.join(__dirname, `../data/mars_balances_${constants.PRE_ATTACK_HEIGHT}.json`),
+      path.join(__dirname, `../data/mars_balances_${height}.json`),
       "utf8"
     )
   );
-  const xmarsBalancesPre: AccountWithBalance[] = JSON.parse(
+  const xmarsBalances: AccountWithBalance[] = JSON.parse(
     fs.readFileSync(
-      path.join(__dirname, `../data/xmars_balances_${constants.PRE_ATTACK_HEIGHT}.json`),
+      path.join(__dirname, `../data/xmars_balances_${height}.json`),
       "utf8"
     )
   );
 
-  const marsOwnersPre = marsBalancesPre.map((acct) => acct.address);
-  const xmarsOwnersPre = xmarsBalancesPre.map((acct) => acct.address);
-  const owners = new Set(marsOwnersPre.concat(xmarsOwnersPre));
+  const marsOwners = marsBalances.map((acct) => acct.address);
+  const xmarsOwners = xmarsBalances.map((acct) => acct.address);
+  const owners = new Set(marsOwners.concat(xmarsOwners));
   console.log("all unique mars or xmars owners:", owners.size);
 
   const entries: Entry[] = [];
   const total = owners.size;
   let count = 0;
   for (const owner of owners) {
-    const hasPubKey = await accountHasPubKey(constants.REST_URL, owner);
     const entry = {
       address: owner,
-      hasPubKey,
-      marsBalancePre: 0,
-      xmarsBalancePre: 0,
+      isContract: await isContract(constants.REST_URL, owner),
+      marsBalance: 0,
+      xmarsBalance: 0,
     };
 
-    let index = marsBalancesPre.findIndex((acct) => acct.address === owner);
+    let index = marsBalances.findIndex((acct) => acct.address === owner);
     if (index > -1) {
-      (entry.marsBalancePre = marsBalancesPre[index]?.balance ?? 0),
-        marsBalancesPre.splice(index, 1);
+      (entry.marsBalance = marsBalances[index]?.balance ?? 0),
+        marsBalances.splice(index, 1);
     }
 
-    index = xmarsBalancesPre.findIndex((acct) => acct.address === owner);
+    index = xmarsBalances.findIndex((acct) => acct.address === owner);
     if (index > -1) {
-      (entry.xmarsBalancePre = xmarsBalancesPre[index]?.balance ?? 0),
-        xmarsBalancesPre.splice(index, 1);
+      (entry.xmarsBalance = xmarsBalances[index]?.balance ?? 0),
+        xmarsBalances.splice(index, 1);
     }
 
     entries.push(entry);
 
     count += 1;
-    console.log(`[${count}/${total}] address = ${owner}, ${hasPubKey ? "" : "ADDRESS MAY BE A CONTRACT"}`);
+    console.log(
+      `[${count}/${total}] address = ${owner}${entry.isContract ? ", ADDRESS IS A CONTRACT" : ""}`
+    );
   }
 
   // sort addresses alphabetically
@@ -85,10 +98,10 @@ async function accountHasPubKey(restUrl: string, address: string) {
   });
 
   // convert to CSV
-  const header = "address,has_pubkey,mars_pre,xmars_pre\n";
+  const header = "address,is_contract,umars,uxmars\n";
   const body = entries
-    .map(({ address, hasPubKey, marsBalancePre, xmarsBalancePre }) => {
-      return `${address},${hasPubKey},${marsBalancePre},${xmarsBalancePre}`;
+    .map(({ address, isContract, marsBalance, xmarsBalance }) => {
+      return `${address},${isContract},${marsBalance},${xmarsBalance}`;
     })
     .join("\n");
 
