@@ -1,25 +1,19 @@
+import * as fs from "fs";
+import * as path from "path";
 import axios from "axios";
 import axiosRetry from "axios-retry";
 
+import * as constants from "./constants";
 import { encodeBase64, decodeBase64 } from "./helpers";
-import { MULTIQUERY } from "./constants";
+import { WasmContractStoreResponse, MultiQueryResponse } from "./types";
 
 axiosRetry(axios);
 
-export type WasmContractStoreResponse<T> = {
-  query_result: T;
-};
-
-export type MultiQueryResponse = {
-  success: boolean;
-  data: string;
-}[];
-
-export type Cw20AllAccountsResponse = {
+type Cw20AllAccountsResponse = {
   accounts: string[];
 };
 
-export type Cw20BalanceResponse = {
+type Cw20BalanceResponse = {
   balance: string;
 };
 
@@ -28,19 +22,19 @@ export type AccountWithBalance = {
   balance: number;
 };
 
-export async function getCw20Owners(restUrl: string, tokenAddress: string, height: number) {
+async function getCw20Owners(restUrl: string, tokenAddress: string, height: number) {
   let accounts: string[] = [];
   let startAfter: string | undefined = undefined;
 
   while (true) {
-    const query = encodeBase64({
+    const queryMsg = encodeBase64({
       all_accounts: {
         start_after: startAfter,
         limit: 30,
       },
     });
     const response = await axios.get<WasmContractStoreResponse<Cw20AllAccountsResponse>>(
-      `${restUrl}/terra/wasm/v1beta1/contracts/${tokenAddress}/store?height=${height}&query_msg=${query}`
+      `${restUrl}/terra/wasm/v1beta1/contracts/${tokenAddress}/store?height=${height}&query_msg=${queryMsg}`
     );
     const result = response.data.query_result;
 
@@ -59,7 +53,7 @@ export async function getCw20Owners(restUrl: string, tokenAddress: string, heigh
   return accounts;
 }
 
-export async function getCw20Balances(
+async function getCw20Balances(
   restUrl: string,
   tokenAddress: string,
   owners: string[],
@@ -88,7 +82,7 @@ export async function getCw20Balances(
       }))
     );
     const response = await axios.get<WasmContractStoreResponse<MultiQueryResponse>>(
-      `${restUrl}/terra/wasm/v1beta1/contracts/${MULTIQUERY}/store?height=${height}&query_msg=${queryMsg}`
+      `${restUrl}/terra/wasm/v1beta1/contracts/${constants.MULTIQUERY}/store?height=${height}&query_msg=${queryMsg}`
     );
     const results = response.data.query_result;
 
@@ -123,3 +117,32 @@ export async function getCw20Balances(
 
   return accountsWithBalances;
 }
+
+const tokenAddress = constants.MARS_TOKEN;
+const tokenName = "mars";
+// const tokenAddress = constants.XMARS_TOKEN;
+// const tokenName = "xmars";
+// const tokenAddress = constants.ASTROPORT_MARS_UST_LP;
+// const tokenName = "astroport_mars_ust_lp";
+// const tokenAddress = constants.ASTROPORT_XMARS_MARS_LP;
+// const tokenName = "astroport_xmars_mars_lp";
+// const tokenAddress = constants.TERRASWAP_MARS_UST_LP;
+// const tokenName = "terraswap_mars_ust_lp";
+
+const height = constants.PRE_ATTACK_HEIGHT;
+
+(async function () {
+  const accounts = await getCw20Owners(constants.REST_URL, tokenAddress, height);
+
+  const accountsWithBalances = await getCw20Balances(
+    constants.REST_URL,
+    tokenAddress,
+    accounts,
+    height
+  );
+
+  fs.writeFileSync(
+    path.join(__dirname, `../data/${tokenName}_owners_${height}.json`),
+    JSON.stringify(accountsWithBalances, null, 2)
+  );
+})();
