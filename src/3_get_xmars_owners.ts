@@ -1,18 +1,17 @@
 import * as fs from "fs";
 import * as path from "path";
+
 import { getCw20Owners } from "./query_cw20";
+import * as constants from "./constants";
 
-const REST_URL = "http://172.255.98.36:1317";
-
-const TOKEN_ADDRESS = "terra1a04v570f9cxp49mk06vjsm8axsswndpwwt67k4";
-const TOKEN_NAME = "xmars";
-const HEIGHT = 7544910; // pre-attack
+const tokenName = "xmars";
+const height = constants.PRE_ATTACK_HEIGHT;
 
 (async function () {
-  const accounts = await getCw20Owners(REST_URL, TOKEN_ADDRESS, HEIGHT);
+  const accounts = await getCw20Owners(constants.REST_URL, constants.XMARS_TOKEN, height);
 
   fs.writeFileSync(
-    path.join(__dirname, `../data/${TOKEN_NAME}_owners_${HEIGHT}.json`),
+    path.join(__dirname, `../data/${tokenName}_owners_${height}.json`),
     JSON.stringify(accounts, null, 2)
   );
 })();
