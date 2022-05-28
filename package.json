@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "@terra-money/terra.js": "^3.1.0",
+    "ts-node": "^10.8.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.26.0",
+    "@typescript-eslint/parser": "^5.26.0",
+    "eslint": "^8.16.0",
+    "typescript": "^4.6.3"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
