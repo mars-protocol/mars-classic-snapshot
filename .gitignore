@@ -3,3 +3,6 @@ node_modules/
 
 # data
 data/
+
+# macOS
+.DS_Store
