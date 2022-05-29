@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@flipsidecrypto/sdk": "^1.0.0-alpha.0",
     "axios": "^0.27.2",
     "axios-retry": "^3.2.5",
     "ts-node": "^10.8.0"
