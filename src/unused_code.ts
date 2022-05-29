@@ -1,5 +1,4 @@
-import * as fs from "fs";
-import * as path from "path";
+// this file contains code that we ended up not using
 import axios from "axios";
 import axiosRetry from "axios-retry";
 
@@ -8,24 +7,21 @@ import { decodeBase64 } from "./helpers";
 
 axiosRetry(axios);
 
-const START_HEIGHT = 6531019; // this is the block where Mars staking contract was deployed
-const END_HEIGHT = constants.POST_ATTACK_HEIGHT;
-
-interface TxsResponse {
+export interface TxsResponse {
   tx_responses: TxResponse[];
   pagination: {
     total: string;
   };
 }
 
-interface TxResponse {
+export interface TxResponse {
   timestamp: string;
   height: string;
   txhash: string;
   events: Event[];
 }
 
-interface Event {
+export interface Event {
   type: string;
   attributes: {
     key: string;
@@ -33,7 +29,10 @@ interface Event {
   }[];
 }
 
-async function getTxsInBlock(height: number) {
+/**
+ * @notice Download all tx responses in a certain block
+ */
+export async function getTxsInBlock(height: number) {
   let txs: TxResponse[] = [];
   let offset = 0;
 
@@ -53,7 +52,7 @@ async function getTxsInBlock(height: number) {
   return txs;
 }
 
-function decodeEvent(event: Event) {
+export function decodeEvent(event: Event) {
   return {
     type: event.type,
     attributes: event.attributes.map((attr) => ({
@@ -64,14 +63,15 @@ function decodeEvent(event: Event) {
 }
 
 /**
- * @dev Find all user addresses that had executed unstake at Mars staking contract. We do this by
+ * @notice Find all user addresses that had executed unstake at Mars staking contract. We do this by
  * querying all txs that had interacted with this contract, and look for once that had emitted the
  * `unstake` event.
+ * @dev Deprecated: we use Flipside API now
  */
-async function getAllUnstakers() {
+export async function getAllUnstakers(startHeight: number, endHeight: number) {
   const unstakers: Set<string> = new Set();
 
-  for (let height = START_HEIGHT; height <= END_HEIGHT; height++) {
+  for (let height = startHeight; height <= endHeight; height++) {
     const txs = await getTxsInBlock(height);
     console.log(`fetched ${txs.length} txs, height = ${height}`);
 
@@ -110,23 +110,3 @@ async function getAllUnstakers() {
 
   return Array.from(unstakers);
 }
-
-(async function () {
-  const unstakers = await getAllUnstakers();
-  console.log(`done! number of unstakers: ${unstakers.length}`);
-
-  unstakers.sort((a, b) => {
-    if (a < b) {
-      return -1;
-    } else if (a > b) {
-      return 1;
-    } else {
-      return 0;
-    }
-  });
-
-  fs.writeFileSync(
-    path.join(__dirname, "../data/xmars_unstakers.json"),
-    JSON.stringify(unstakers, null, 2)
-  );
-})();
