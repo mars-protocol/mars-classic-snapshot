@@ -4,7 +4,7 @@ import axios from "axios";
 import axiosRetry from "axios-retry";
 
 import * as constants from "./constants";
-import { encodeBase64, decodeBase64 } from "./helpers";
+import { encodeBase64, decodeBase64IntoObject } from "./helpers";
 import { WasmContractStoreResponse, MultiQueryResponse } from "./types";
 
 axiosRetry(axios);
@@ -89,7 +89,7 @@ async function getCw20Balances(
     slice.forEach((owner, index) => {
       const result = results[index];
       if (result) {
-        const balanceResponse: Cw20BalanceResponse = decodeBase64(result.data);
+        const balanceResponse: Cw20BalanceResponse = decodeBase64IntoObject(result.data);
         accountsWithBalances.push({
           address: owner,
           balance: Number(balanceResponse.balance),
