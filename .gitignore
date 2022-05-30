@@ -1,8 +1,15 @@
 # npm
-node_modules/
+node_modules
+
+# IDEs
+.idea
+.vscode
+
+# jupyter
+.ipynb_checkpoints
 
 # data
-data/
+data
 
 # macOS
 .DS_Store

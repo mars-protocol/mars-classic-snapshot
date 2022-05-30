@@ -3,8 +3,9 @@ import * as path from "path";
 import axios from "axios";
 import { Flipside, Query } from "@flipsidecrypto/sdk";
 
+import { AccountWithBalance } from "./1_get_cw20_owners";
 import * as constants from "./constants";
-import { encodeBase64, decodeBase64IntoObject } from "./helpers";
+import { encodeBase64, decodeBase64 } from "./helpers";
 import { WasmContractStoreResponse, MultiQueryResponse } from "./types";
 
 type ClaimResponse = {
@@ -13,11 +14,6 @@ type ClaimResponse = {
     cooldown_end_timestamp: number;
     amount: string;
   };
-};
-
-export type AccountWithAmount = {
-  address: string;
-  amount: number;
 };
 
 // Initialize `Flipside` with your API key
@@ -41,7 +37,12 @@ async function getAllUnstakers() {
   const result = await flipside.query.run(query);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return result.records?.map((r) => ((r["action_log"] as any)["staker"] as string)) ?? [];
+  const unstakersWithDups = result.records?.map((r) => ((r["action_log"] as any)["staker"] as string)) ?? [];
+
+  // remove dups
+  const unstakers = Array.from(new Set(unstakersWithDups));
+
+  return unstakers;
 }
 
 /**
@@ -53,7 +54,7 @@ async function getUnstakeClaims(restUrl: string, stakers: string[], height: numb
   const batchSize = 20;
 
   let count = 0;
-  const accountsWithAmounts: AccountWithAmount[] = [];
+  const accountsWithBalances: AccountWithBalance[] = [];
 
   for (let start = 0; start < total; start += batchSize) {
     const end = start + batchSize;
@@ -79,35 +80,35 @@ async function getUnstakeClaims(restUrl: string, stakers: string[], height: numb
 
     slice.forEach((staker, index) => {
       const result = results[index];
-      let amount = 0;
+      let balance = 0;
 
       if (result && result.success) {
-        const { claim }: ClaimResponse = decodeBase64IntoObject(result.data);
+        const { claim }: ClaimResponse = decodeBase64(result.data);
         if (claim) {
-          amount = Number(claim.amount);
-          accountsWithAmounts.push({ address: staker, amount });
+          balance = Number(claim.amount);
+          accountsWithBalances.push({ address: staker, balance });
         }
       }
 
       count += 1;
-      console.log(`[${count}/${total}] staker = ${staker}, amount = ${amount}`);
+      console.log(`[${count}/${total}] staker = ${staker}, balance = ${balance}`);
     });
   }
 
-  accountsWithAmounts.sort((a, b) => {
-    if (a.amount > b.amount) {
+  accountsWithBalances.sort((a, b) => {
+    if (a.balance > b.balance) {
       return -1;
-    } else if (a.amount < b.amount) {
+    } else if (a.balance < b.balance) {
       return 1;
     } else {
       return 0;
     }
   });
 
-  const totalClaimableAmount = accountsWithAmounts.reduce((a, b) => a + b.amount, 0);
+  const totalClaimableAmount = accountsWithBalances.reduce((a, b) => a + b.balance, 0);
   console.log("done! total claimable amount:", totalClaimableAmount);
 
-  return accountsWithAmounts;
+  return accountsWithBalances;
 }
 
 const height = constants.PRE_ATTACK_HEIGHT;
@@ -119,7 +120,7 @@ const height = constants.PRE_ATTACK_HEIGHT;
 
   const claims = await getUnstakeClaims(constants.REST_URL, unstakers, height);
   fs.writeFileSync(
-    path.join(__dirname, "../data/unstake_claims.json"),
+    path.join(__dirname, `../data/unstake_claims_${height}.json`),
     JSON.stringify(claims, null, 2)
   );
 })();

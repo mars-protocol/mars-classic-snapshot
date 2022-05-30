@@ -7,6 +7,7 @@ export const MARS_TOKEN = "terra12hgwnpupflfpuual532wgrxu2gjp0tcagzgx4n";
 export const XMARS_TOKEN = "terra1a04v570f9cxp49mk06vjsm8axsswndpwwt67k4";
 export const MARS_COUNCIL = "terra1685de0sx5px80d47ec2xjln224phshysqxxeje";
 export const MARS_STAKING = "terra1y8wwr5q24msk55x9smwn0ptyt24fxpwm4l7tjl";
+export const MARS_LP_STAKING = "terra1gmggdadphqxua2kewcgn2l57xxteafpne50je0";
 
 export const ASTROPORT_MARS_UST_PAIR = "terra19wauh79y42u5vt62c5adt2g5h4exgh26t3rpds";
 export const ASTROPORT_MARS_UST_LP = "terra1ww6sqvfgmktp0afcmvg78st6z89x5zr3tmvpss";
