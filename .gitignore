@@ -13,3 +13,6 @@ data
 
 # macOS
 .DS_Store
+
+# scripts that i do not wish to commit are prefixed by an underscore
+**/_*.ts

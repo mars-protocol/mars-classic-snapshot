@@ -30,7 +30,7 @@ async function getAllUnstakers() {
     sql: `
       select * from terra.event_actions
         where action_contract_address = '${constants.MARS_STAKING}'
-        and block_id between ${START_HEIGHT} and ${constants.POST_ATTACK_HEIGHT}
+        and block_id between ${START_HEIGHT} and ${constants.POST_DEPEG_HEIGHT}
         and action_method = 'unstake'
     `,
   };
@@ -59,6 +59,7 @@ async function getUnstakeClaims(restUrl: string, stakers: string[], height: numb
   for (let start = 0; start < total; start += batchSize) {
     const end = start + batchSize;
     const slice = stakers.slice(start, end > total ? total : end);
+
     const queryMsg = encodeBase64(
       slice.map((staker) => ({
         wasm: {
@@ -73,6 +74,7 @@ async function getUnstakeClaims(restUrl: string, stakers: string[], height: numb
         },
       }))
     );
+
     const response = await axios.get<WasmContractStoreResponse<MultiQueryResponse>>(
       `${restUrl}/terra/wasm/v1beta1/contracts/${constants.MULTIQUERY}/store?height=${height}&query_msg=${queryMsg}`
     );
@@ -95,23 +97,13 @@ async function getUnstakeClaims(restUrl: string, stakers: string[], height: numb
     });
   }
 
-  accountsWithBalances.sort((a, b) => {
-    if (a.balance > b.balance) {
-      return -1;
-    } else if (a.balance < b.balance) {
-      return 1;
-    } else {
-      return 0;
-    }
-  });
-
-  const totalClaimableAmount = accountsWithBalances.reduce((a, b) => a + b.balance, 0);
-  console.log("done! total claimable amount:", totalClaimableAmount);
+  const totalBalance = accountsWithBalances.reduce((a, b) => a + b.balance, 0);
+  console.log("done! total balance:", totalBalance);
 
   return accountsWithBalances;
 }
 
-const height = constants.PRE_ATTACK_HEIGHT;
+const height = constants.PRE_DEPEG_HEIGHT;
 
 (async function () {
   console.log("fetching list of unstakers from flipside...");
