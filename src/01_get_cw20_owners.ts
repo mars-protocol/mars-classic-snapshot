@@ -5,22 +5,15 @@ import axiosRetry from "axios-retry";
 
 import * as constants from "./constants";
 import { encodeBase64, decodeBase64 } from "./helpers";
-import { WasmContractStoreResponse, MultiQueryResponse } from "./types";
+import {
+  WasmSmartQueryResponse,
+  MultiQueryResponse,
+  Cw20AllAccountsResponse,
+  Cw20BalanceResponse,
+  AccountWithBalance,
+} from "./types";
 
 axiosRetry(axios);
-
-type Cw20AllAccountsResponse = {
-  accounts: string[];
-};
-
-type Cw20BalanceResponse = {
-  balance: string;
-};
-
-export type AccountWithBalance = {
-  address: string;
-  balance: number;
-};
 
 async function getCw20Owners(restUrl: string, tokenAddress: string, height: number) {
   let accounts: string[] = [];
@@ -33,7 +26,7 @@ async function getCw20Owners(restUrl: string, tokenAddress: string, height: numb
         limit: 30,
       },
     });
-    const response = await axios.get<WasmContractStoreResponse<Cw20AllAccountsResponse>>(
+    const response = await axios.get<WasmSmartQueryResponse<Cw20AllAccountsResponse>>(
       `${restUrl}/terra/wasm/v1beta1/contracts/${tokenAddress}/store?height=${height}&query_msg=${queryMsg}`
     );
     const result = response.data.query_result;
@@ -129,7 +122,7 @@ const tokenName = "mars";
 // const tokenAddress = constants.TERRASWAP_MARS_UST_LP;
 // const tokenName = "terraswap_mars_ust_lp";
 
-const height = constants.PRE_ATTACK_HEIGHT;
+const height = constants.PRE_DEPEG_HEIGHT;
 
 (async function () {
   const accounts = await getCw20Owners(constants.REST_URL, tokenAddress, height);

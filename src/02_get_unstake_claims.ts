@@ -3,10 +3,9 @@ import * as path from "path";
 import axios from "axios";
 import { Flipside, Query } from "@flipsidecrypto/sdk";
 
-import { AccountWithBalance } from "./1_get_cw20_owners";
 import * as constants from "./constants";
 import { encodeBase64, decodeBase64 } from "./helpers";
-import { WasmContractStoreResponse, MultiQueryResponse } from "./types";
+import { WasmSmartQueryResponse, MultiQueryResponse, AccountWithBalance } from "./types";
 
 type ClaimResponse = {
   claim?: {
@@ -75,7 +74,7 @@ async function getUnstakeClaims(restUrl: string, stakers: string[], height: numb
       }))
     );
 
-    const response = await axios.get<WasmContractStoreResponse<MultiQueryResponse>>(
+    const response = await axios.get<WasmSmartQueryResponse<MultiQueryResponse>>(
       `${restUrl}/terra/wasm/v1beta1/contracts/${constants.MULTIQUERY}/store?height=${height}&query_msg=${queryMsg}`
     );
     const results = response.data.query_result;

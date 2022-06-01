@@ -4,11 +4,15 @@ import * as path from "path";
 import axios from "axios";
 import axiosRetry from "axios-retry";
 
-import { AccountWithBalance } from "./1_get_cw20_owners";
 import * as constants from "./constants";
 import { encodeBase64, decodeBase64, sumArrayOfNumbers, isContract } from "./helpers";
-import { WasmContractStoreResponse, MultiQueryResponse, Cw20TokenInfoResponse } from "./types";
-import { AccountWithBalanceAndReward } from "./3_get_mars_lp_stakers";
+import {
+  WasmSmartQueryResponse,
+  MultiQueryResponse,
+  Cw20TokenInfoResponse,
+  AccountWithBalance,
+  AccountWithBalanceAndReward,
+} from "./types";
 
 axiosRetry(axios);
 
@@ -31,8 +35,14 @@ const MARS_TOKEN_TYPES = [
   "in_astroport_xmars_mars_pair",
   // Astroport MARS-UST LP tokens in Astro generator, as well as pending reward
   "in_generator",
+  // Astroport MARS-UST LP tokens in ApolloDAO autocompounder, as well as pending reward
+  "in_apollo",
+  // Astroport MARS-UST LP tokens in Spectrum protocol autocompounder, as well as pending reward
+  "in_spec",
   // Astroport MARS-UST LP tokens in lockdrop phase 2, as well as pending generator pending reward
   "in_auction",
+  // MARS tokens deposited in Mars Council when creating proposals
+  "in_council",
 ] as const;
 
 type MarsTokenType = typeof MARS_TOKEN_TYPES[number];
@@ -129,7 +139,8 @@ class Entries {
   }
 
   toCsv() {
-    const header = ["address", "is_contract"].concat(MARS_TOKEN_TYPES).concat(["total"]).join(",") + "\n";
+    const header =
+      ["address", "is_contract"].concat(MARS_TOKEN_TYPES).concat(["total"]).join(",") + "\n";
     const body = this.entries.map((entry) => entry.toCsvRow()).join("\n");
     return header + body;
   }
@@ -194,7 +205,7 @@ const entries = new Entries();
       },
     },
   ]);
-  const response = await axios.get<WasmContractStoreResponse<MultiQueryResponse>>(
+  const response = await axios.get<WasmSmartQueryResponse<MultiQueryResponse>>(
     `${constants.REST_URL}/terra/wasm/v1beta1/contracts/${constants.MULTIQUERY}/store?height=${height}&query_msg=${queryMsg}`
   );
   const results = response.data.query_result;
@@ -419,6 +430,81 @@ const entries = new Entries();
   // handle Mars auction, i.e. lockdrop phase 2
   //------------------------------------------------------------------------------------------------
 
+  // get users who have deposited in lockdrop phase 2
+  const auctionParticipants: AccountWithBalanceAndReward[] = JSON.parse(
+    fs.readFileSync(path.join(__dirname, `../data/auction_participants_${height}.json`), "utf8")
+  );
+  console.log("loaded auction participants! total =", auctionParticipants.length);
+
+  const auctionEntry = entries.entryOfAddress(constants.MARS_AUCTION)!;
+  // move numbers around - just internal accounting
+  auctionEntry.marsTokens.in_wallet += auctionEntry.marsTokens.in_generator;
+  auctionEntry.marsTokens.in_generator = 0;
+
+  for (const { address, balance, pendingReward } of auctionParticipants) {
+    // the amount the user is entitled to
+    const amount = (balance * marsInAstroportMarsUstPool) / astroportMarsUstTotalShares + pendingReward;
+
+    // we deduct this from auction contract's balance
+    auctionEntry.marsTokens.in_wallet -= amount;
+
+    entries.addAmountByAddress(address, "in_auction", amount);
+  }
+  console.log("appended Mars auction participants to entires");
+
+  // the rest of the amount owned by the auction contract is clawed back
+  entries.communityPoolTotal += auctionEntry.sum();
+  entries.removeEntryByAddress(constants.MARS_AUCTION);
+  console.log("clawed back undistributed incentives in Mars auction");
+
+  // check total MARS tokens. must be close to 1B (can tolerate small deviations, due to rounding errors)
+  entries.checkTotal();
+
+  //------------------------------------------------------------------------------------------------
+  // handle Apollo MARS-UST autocompounder
+  //------------------------------------------------------------------------------------------------
+
+  //------------------------------------------------------------------------------------------------
+  // handle Spectrum MARS-UST autocompounder
+  //------------------------------------------------------------------------------------------------
+
+  const specUsers: AccountWithBalance[] = JSON.parse(
+    fs.readFileSync(path.join(__dirname, `../data/spec_users_${height}.json`), "utf8")
+  );
+  console.log("loaded spec users! total =", specUsers.length);
+
+  const totalShares = specUsers.reduce((a, b) => a + b.balance, 0);
+  const specEntry = entries.entryOfAddress(constants.SPECTRUM_MARS_UST_FARM)!;
+
+  for (const { address, balance } of specUsers) {
+    entries.addAmountByAddress(address, "in_spec", specEntry.sum() * balance / totalShares);
+  }
+  console.log("appended spec users to entires");
+
+  entries.removeEntryByAddress(constants.SPECTRUM_MARS_UST_FARM);
+  console.log("removed spec autocompounder contract from entries");
+
+  entries.checkTotal();
+
+  //------------------------------------------------------------------------------------------------
+  // handle council depositors
+  //------------------------------------------------------------------------------------------------
+
+  // get users who deposited MARS tokens at council
+  const councilDepositors: AccountWithBalance[] = JSON.parse(
+    fs.readFileSync(path.join(__dirname, `../data/council_depositors_${height}.json`), "utf8")
+  );
+  console.log("loaded council depositors! total =", councilDepositors.length);
+
+  for (const { address, balance } of councilDepositors) {
+    entries.addAmountByAddress(address, "in_council", balance);
+  }
+  console.log("appended council depositors to entires");
+
+  entries.removeEntryByAddress(constants.MARS_COUNCIL);
+  console.log("removed council contract from entries");
+
+  entries.checkTotal();
 
   //------------------------------------------------------------------------------------------------
   // claw backs
@@ -427,40 +513,58 @@ const entries = new Entries();
   // - unclaimed tokens in lockdrop phases 1 & 2
   // - tokens in admin multisig
   // - tokens in vesting
+  // - 1 MARS sent to the xMARS contract by mistake
+  // - small amount of tokens owned by Astro fee pool and Pylon governance
   //------------------------------------------------------------------------------------------------
 
-  const terraswapMarsEutPairEntry = entries.entryOfAddress(constants.TERRASWAP_MARS_EUT_PAIR);
-  entries.communityPoolTotal += terraswapMarsEutPairEntry?.marsTokens.in_wallet ?? 0;
+  const terraswapMarsEutPairEntry = entries.entryOfAddress(constants.TERRASWAP_MARS_EUT_PAIR)!;
+  entries.communityPoolTotal += terraswapMarsEutPairEntry.sum();
   entries.removeEntryByAddress(constants.TERRASWAP_MARS_EUT_PAIR);
 
-  const terraswapMarsSetPairEntry = entries.entryOfAddress(constants.TERRASWAP_MARS_SET_PAIR);
-  entries.communityPoolTotal += terraswapMarsSetPairEntry?.marsTokens.in_wallet ?? 0;
+  const terraswapMarsSetPairEntry = entries.entryOfAddress(constants.TERRASWAP_MARS_SET_PAIR)!;
+  entries.communityPoolTotal += terraswapMarsSetPairEntry.sum();
   entries.removeEntryByAddress(constants.TERRASWAP_MARS_SET_PAIR);
 
   console.log("clawed back tokens in Terraswap EUT, SET pairs");
 
-  const airdropEntry = entries.entryOfAddress(constants.MARS_AIRDROP);
-  entries.communityPoolTotal += airdropEntry?.marsTokens.in_wallet ?? 0;
+  const airdropEntry = entries.entryOfAddress(constants.MARS_AIRDROP)!;
+  entries.communityPoolTotal += airdropEntry.sum();
   entries.removeEntryByAddress(constants.MARS_AIRDROP);
   console.log("clawed back unclaimed airdrops");
 
-  const lockdropEntry = entries.entryOfAddress(constants.MARS_LOCKDROP);
-  entries.communityPoolTotal += lockdropEntry?.marsTokens.in_wallet ?? 0;
+  const lockdropEntry = entries.entryOfAddress(constants.MARS_LOCKDROP)!;
+  entries.communityPoolTotal += lockdropEntry.sum();
   entries.removeEntryByAddress(constants.MARS_LOCKDROP);
   console.log("clawed back unclaimed tokens in lockdrop phase 1");
 
-  const adminMultisigEntry = entries.entryOfAddress(constants.MARS_ADMIN_MULTISIG);
-  entries.communityPoolTotal += adminMultisigEntry?.marsTokens.in_wallet ?? 0;
+  const adminMultisigEntry = entries.entryOfAddress(constants.MARS_ADMIN_MULTISIG)!;
+  entries.communityPoolTotal += adminMultisigEntry.sum();
   entries.removeEntryByAddress(constants.MARS_ADMIN_MULTISIG);
   console.log("clawed back unclaimed tokens in admin multisig");
 
-  const vestingEntry = entries.entryOfAddress(constants.MARS_VESTING);
-  entries.vestingTotal += vestingEntry?.marsTokens.in_wallet ?? 0;
+  const vestingEntry = entries.entryOfAddress(constants.MARS_VESTING)!;
+  entries.vestingTotal += vestingEntry.sum();
   entries.removeEntryByAddress(constants.MARS_VESTING);
   console.log("clawed back unclaimed tokens in vesting");
 
-  // check total MARS tokens. must be close to 1B (can tolerate small deviations, due to rounding errors)
+  const xMarsEntry = entries.entryOfAddress(constants.XMARS_TOKEN)!;
+  entries.communityPoolTotal += xMarsEntry.sum();
+  entries.removeEntryByAddress(constants.XMARS_TOKEN);
+  console.log("clawed back tokens sent to xMars contract by mistake by someone");
+
+  const astroFeePoolEntry = entries.entryOfAddress(constants.ASTROPORT_FEE_POOL)!;
+  entries.communityPoolTotal += astroFeePoolEntry.sum();
+  entries.removeEntryByAddress(constants.ASTROPORT_FEE_POOL);
+  console.log("clawed back tokens held by astro fee pool");
+
+  const pylonGovEntry = entries.entryOfAddress(constants.PYLON_GOVERNANCE)!;
+  entries.communityPoolTotal += pylonGovEntry.sum();
+  entries.removeEntryByAddress(constants.PYLON_GOVERNANCE);
+  console.log("clawed back tokens held by pylon governance");
+
   entries.checkTotal();
+
+  console.log("done!")
 
   //------------------------------------------------------------------------------------------------
   // done!!

@@ -22,11 +22,29 @@ export const TERRASWAP_MARS_SET_PAIR = "terra109wt0lvwk560kjpdhuusj3a7ldnzasv028
 
 export const ASTROPORT_MARS_UST_PAIR = "terra19wauh79y42u5vt62c5adt2g5h4exgh26t3rpds";
 export const ASTROPORT_MARS_UST_LP = "terra1ww6sqvfgmktp0afcmvg78st6z89x5zr3tmvpss";
+
 export const ASTROPORT_XMARS_MARS_PAIR = "terra1dawj5mr2qt2nlurge30lfgjg6ly4ls99yeyd25";
 export const ASTROPORT_XMARS_MARS_LP = "terra1cxmdyn5srv8uwvhgz5ckqf28zf8c7uwyz08f2j";
 
 export const ASTRO_GENERATOR = "terra1zgrx9jjqrfye8swykfgmd6hpde60j0nszzupp9";
 export const ASTRO_GENERATOR_PROXY = "terra1aqehsnrdadp7s8exny69h5vln3llp38wttv0cr";
+
+export const APOLLO_MARS_UST_FARM = "terra1au5kxqz46r6qtqqk2nur4wr2yd457zp4fscuzx";
+
+export const SPECTRUM_MARS_UST_FARM = "terra1d55nmhuq75r3vf93hwkau2stts4mpe9h22herz";
+export const SPECTRUM_STAKER = "terra1mwnu40j5q8c42kv59kqx0u2peyku94564wwhvd";
+
+export const ASTROPORT_FEE_POOL = "terra12u7hcmpltazmmnq0fvyl225usn3fy6qqlp05w0";
+export const PYLON_GOVERNANCE = "terra1xu8utj38xuw6mjwck4n97enmavlv852zkcvhgp";
+
+export const DELPHI_MULTISIG = "terra14pt4wrmy4glv05jdqcus6ac3fvp78hgcdmm6dm";
+
+// CW3 multisigs (other than the Delphi one) we have detected in the snapshots
+export const CW3_MULTISIGS = [
+  "terra1hxrd8pnqytqpelape3aemprw3a023wryw7p0xn",
+  "terra1qmp8zfh9rmf9wpxqlc2p4jd2q2q949kvwua6gm",
+  "terra17tllpu9de4qjekxgerpu8nhc0r7ukv9vfy85m0",
+];
 
 // https://github.com/st4k3h0us3/multiquery
 export const MULTIQUERY = "terra1swrywzkphty20e2uzpy582xu836luw0e5yp25m";

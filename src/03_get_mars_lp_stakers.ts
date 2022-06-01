@@ -5,18 +5,12 @@ import { Flipside, Query } from "@flipsidecrypto/sdk";
 
 import * as constants from "./constants";
 import { encodeBase64, decodeBase64 } from "./helpers";
-import { WasmContractStoreResponse, MultiQueryResponse } from "./types";
-
-type PendingTokenResponse = {
-  pending: string;
-  pending_on_proxy: string;
-};
-
-export type AccountWithBalanceAndReward = {
-  address: string;
-  balance: number;
-  pendingReward: number;
-};
+import {
+  WasmSmartQueryResponse,
+  MultiQueryResponse,
+  PendingTokenResponse,
+  AccountWithBalanceAndReward,
+} from "./types";
 
 // Initialize `Flipside` with your API key
 const flipside = new Flipside(constants.FLIPSIDE_API_KEY, "https://node-api.flipsidecrypto.com");
@@ -107,7 +101,7 @@ export async function getLiquidityProviderInfos(
       }))
     );
 
-    const response1 = await axios.get<WasmContractStoreResponse<MultiQueryResponse>>(
+    const response1 = await axios.get<WasmSmartQueryResponse<MultiQueryResponse>>(
       `${restUrl}/terra/wasm/v1beta1/contracts/${constants.MULTIQUERY}/store?height=${height}&query_msg=${queryMsg1}`
     );
     const results1 = response1.data.query_result;
@@ -129,7 +123,7 @@ export async function getLiquidityProviderInfos(
       }))
     );
 
-    const response2 = await axios.get<WasmContractStoreResponse<MultiQueryResponse>>(
+    const response2 = await axios.get<WasmSmartQueryResponse<MultiQueryResponse>>(
       `${restUrl}/terra/wasm/v1beta1/contracts/${constants.MULTIQUERY}/store?height=${height}&query_msg=${queryMsg2}`
     );
     const results2 = response2.data.query_result;
