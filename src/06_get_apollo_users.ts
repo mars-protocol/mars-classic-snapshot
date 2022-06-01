@@ -47,25 +47,20 @@ export async function getAccountsWithBalances(users: string[], height: number) {
     const key = keyBytes.toString("base64").replaceAll("+", "-").replaceAll("/", "_");
 
     let balance = 0;
-    let isError = false;
 
-    try {
-      const response = await axios.get<WasmRawQueryResponse>(
-        `${constants.REST_URL}/terra/wasm/v1beta1/contracts/${constants.APOLLO_MARS_UST_FARM}/store/raw?height=${height}&key=${key}`
-      );
-      const rawResponse = response.data.data;
+    const response = await axios.get<WasmRawQueryResponse>(
+      `${constants.REST_URL}/terra/wasm/v1beta1/contracts/${constants.APOLLO_MARS_UST_FARM}/store/raw?height=${height}&key=${key}`
+    );
+    const rawResponse = response.data.data;
 
-      if (!!rawResponse) {
-        const userInfo: ApolloUserInfo = decodeBase64(rawResponse);
-        balance = Number(userInfo.shares);
-        accountsWithBalances.push({ address: user, balance });
-      }
-    } catch {
-      isError = true;
+    if (!!rawResponse) {
+      const userInfo: ApolloUserInfo = decodeBase64(rawResponse);
+      balance = Number(userInfo.shares);
+      accountsWithBalances.push({ address: user, balance });
     }
 
     count += 1;
-    console.log(`[${count}/${total}] user = ${user}, balance = ${balance}`, (isError ? "!!! ERROR !!!" : ""));
+    console.log(`[${count}/${total}] user = ${user}, balance = ${balance}`);
   }
 
   accountsWithBalances = accountsWithBalances.filter((account) => account.balance > 0);
