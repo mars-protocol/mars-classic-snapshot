@@ -41,9 +41,13 @@ export async function getAccountsWithBalances(users: string[], height: number) {
 
   for (const user of users) {
     const keyBytes = Buffer.concat([toLengthPrefixed("user"), addrCanonicalize(user)]);
-    const key = keyBytes.toString("base64");
+
+    // for some reason we need to replace `+` with `-`, and `/` with `_`, otherwise will get
+    // `illegal base64 data at input byte x` error
+    const key = keyBytes.toString("base64").replaceAll("+", "-").replaceAll("/", "_");
 
     let balance = 0;
+    let isError = false;
 
     try {
       const response = await axios.get<WasmRawQueryResponse>(
@@ -53,16 +57,15 @@ export async function getAccountsWithBalances(users: string[], height: number) {
 
       if (!!rawResponse) {
         const userInfo: ApolloUserInfo = decodeBase64(rawResponse);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         balance = Number(userInfo.shares);
         accountsWithBalances.push({ address: user, balance });
       }
     } catch {
-      //...
+      isError = true;
     }
 
     count += 1;
-    console.log(`[${count}/${total}] user = ${user}, balance = ${balance}`);
+    console.log(`[${count}/${total}] user = ${user}, balance = ${balance}`, (isError ? "!!! ERROR !!!" : ""));
   }
 
   accountsWithBalances = accountsWithBalances.filter((account) => account.balance > 0);
