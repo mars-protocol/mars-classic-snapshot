@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as fs from "fs";
 import * as path from "path";
 import axios from "axios";
@@ -40,9 +41,6 @@ async function getAllLiquidityProviders() {
   return stakers;
 }
 
-/**
- * @notice Find all users who have invoked `send` method on Astroport MARS-UST LP tokens
- */
 async function getAllLpTokenSenders() {
   const START_HEIGHT = 5713559; // this was the height when Astroport factory contract was instantiated
 
@@ -65,10 +63,6 @@ async function getAllLpTokenSenders() {
   return stakers;
 }
 
-/**
- * @notice For each liquidity provider, find the amount of Astroport MARS-UST LP token they staked
- * at the Astro generator, as well as their claimable MARS reward amount.
- */
 export async function getLiquidityProviderInfos(
   restUrl: string,
   liquidityProviders: string[],
@@ -168,7 +162,7 @@ export async function getLiquidityProviderInfos(
   return accountsWithBalances.filter((account) => account.balance > 0);
 }
 
-const height = constants.PRE_DEPEG_HEIGHT;
+const height = constants.POST_DEPEG_HEIGHT;
 
 (async function () {
   console.log("fetching list of liquidity providers from flipside...");

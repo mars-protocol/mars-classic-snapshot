@@ -1,4 +1,20 @@
 //--------------------------------------------------------------------------------------------------
+// cosmos basic types
+//--------------------------------------------------------------------------------------------------
+
+export interface TxsResponse {
+  tx: {
+    body: {
+      messages: [
+        {
+          sender?: string;
+        }
+      ];
+    };
+  };
+}
+
+//--------------------------------------------------------------------------------------------------
 // wasm module types
 //--------------------------------------------------------------------------------------------------
 
@@ -8,7 +24,7 @@ export type WasmSmartQueryResponse<T> = {
 
 export type WasmRawQueryResponse = {
   data: string;
-}
+};
 
 export type MultiQueryResponse = {
   success: boolean;
@@ -37,6 +53,15 @@ export type Cw20BalanceResponse = {
 //--------------------------------------------------------------------------------------------------
 // mars protocol types
 //--------------------------------------------------------------------------------------------------
+
+// Mars staking
+export type ClaimResponse = {
+  claim?: {
+    created_at_block: number;
+    cooldown_end_timestamp: number;
+    amount: string;
+  };
+};
 
 // Mars council
 export interface ProposalsResponse {
@@ -83,13 +108,13 @@ export type PendingTokenResponse = {
 
 export type ApolloUserInfo = {
   shares: string;
-}
+};
 
 export type ApolloStategyInfoResponse = {
   global_index: string;
   total_bond_amount: string;
   total_shares: string;
-}
+};
 
 //--------------------------------------------------------------------------------------------------
 // spectrum types
@@ -100,7 +125,7 @@ export interface RewardInfoResponse {
   staker_addr: string;
   reward_infos: {
     bond_amount: string;
-  }[]
+  }[];
 }
 
 //--------------------------------------------------------------------------------------------------

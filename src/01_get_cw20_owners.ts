@@ -74,7 +74,7 @@ async function getCw20Balances(
         },
       }))
     );
-    const response = await axios.get<WasmContractStoreResponse<MultiQueryResponse>>(
+    const response = await axios.get<WasmSmartQueryResponse<MultiQueryResponse>>(
       `${restUrl}/terra/wasm/v1beta1/contracts/${constants.MULTIQUERY}/store?height=${height}&query_msg=${queryMsg}`
     );
     const results = response.data.query_result;
@@ -108,13 +108,16 @@ async function getCw20Balances(
     }
   });
 
+  const totalBalance = accountsWithBalances.reduce((a, b) => a + b.balance, 0);
+  console.log("total balance:", totalBalance);
+
   return accountsWithBalances;
 }
 
-const tokenAddress = constants.MARS_TOKEN;
-const tokenName = "mars";
-// const tokenAddress = constants.XMARS_TOKEN;
-// const tokenName = "xmars";
+// const tokenAddress = constants.MARS_TOKEN;
+// const tokenName = "mars";
+const tokenAddress = constants.XMARS_TOKEN;
+const tokenName = "xmars";
 // const tokenAddress = constants.ASTROPORT_MARS_UST_LP;
 // const tokenName = "astroport_mars_ust_lp";
 // const tokenAddress = constants.ASTROPORT_XMARS_MARS_LP;
@@ -122,7 +125,7 @@ const tokenName = "mars";
 // const tokenAddress = constants.TERRASWAP_MARS_UST_LP;
 // const tokenName = "terraswap_mars_ust_lp";
 
-const height = constants.PRE_DEPEG_HEIGHT;
+const height = constants.POST_DEPEG_HEIGHT;
 
 (async function () {
   const accounts = await getCw20Owners(constants.REST_URL, tokenAddress, height);

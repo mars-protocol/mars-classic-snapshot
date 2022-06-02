@@ -68,7 +68,7 @@ export async function getAccountsWithBalances(users: string[], height: number) {
   return accountsWithBalances;
 }
 
-const height = constants.PRE_DEPEG_HEIGHT;
+const height = constants.POST_DEPEG_HEIGHT;
 
 (async function () {
   console.log("loading user addresses...");

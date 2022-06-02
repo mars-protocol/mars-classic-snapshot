@@ -122,7 +122,7 @@ async function getAuctionParticipants(restUrl: string, depositors: string[], hei
   return accountsWithBalances;
 }
 
-const height = constants.PRE_DEPEG_HEIGHT;
+const height = constants.POST_DEPEG_HEIGHT;
 
 (async function () {
   console.log("fetching list of UST depositors...");

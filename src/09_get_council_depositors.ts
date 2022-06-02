@@ -6,7 +6,7 @@ import * as constants from "./constants";
 import { encodeBase64 } from "./helpers";
 import { WasmSmartQueryResponse, ProposalsResponse, AccountWithBalance } from "./types";
 
-const height = constants.PRE_DEPEG_HEIGHT;
+const height = constants.POST_DEPEG_HEIGHT;
 
 (async function () {
   const queryMsg = encodeBase64({
